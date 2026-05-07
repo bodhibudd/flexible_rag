@@ -1,14 +1,3 @@
-"""
-DMQR-RAG + LightRAG + AT-RAG 迭代系统
-流程：
-1. 使用 DMQR-RAG 对原始查询进行多策略改写
-2. 对改写后的查询提取低级关键词（实体/具体词）和高级关键词（主题/概念）
-3. 使用 LightRAG 进行实体关系及文档检索
-4. 使用 at-rag中的CoT思想生成答案，并对答案进行评估：
-   - 若答案合格（无幻觉 + 有效解答问题），直接返回
-   - 若不合格，at-rag 重写查询 → 回到步骤1迭代
-5. 达到最大迭代次数后强制返回最后一次答案
-"""
 from dotenv import load_dotenv
 load_dotenv()
 import asyncio
@@ -29,7 +18,7 @@ from rag.constants import DMQR_STRATEGY_TYPES
 WORKING_DIR = "./dickens"
 light_rag = LightRAG(
     working_dir=WORKING_DIR,
-    llm_model_func=qwen_max_complete,  # Use gpt_4o_mini_complete LLM model
+    llm_model_func=qwen_max_complete
     llm_model_kwargs={"base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1"}
 )
 
@@ -177,7 +166,6 @@ async def extract_keywords(
 
 @dataclass
 class State:
-    """流水线中间状态"""
     iteration: int = 0
     current_query: str = ""
     rewritten_queries: List[str] = field(default_factory=list)
@@ -187,7 +175,6 @@ class State:
 
 @dataclass
 class FinalResult:
-    """流水线最终输出"""
     answer: str
     total_iterations: int
     final_query: str
@@ -197,14 +184,6 @@ class FinalResult:
 
 
 class IntegratedRAGPipeline:
-    """
-    DMQR-RAG + LightRAG + AT-RAG
-    完整流程:
-    step 1: DMQR 多策略改写
-    step 2: 低级/高级关键词提取
-    step 3: LightRAG检索
-    step 4: AT-RAG中生成思考过程，将思考过程与问题和上下文拼接用于生成答案，然后评估 通过 → 返回答案 不通过 → AT-RAG 重写查询 → 回到 Step 1 迭代
-    """
 
     def __init__(self, config: Config, rag: Optional[LightRAG] = None):
         self.config = config
